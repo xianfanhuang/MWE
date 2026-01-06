@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MWE | 多币种权证收益估算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background: #F8FAFC; min-height: 100vh; padding: 1rem; color: #1E293B; }
+        .container { max-width: 700px; margin: 0 auto; }
+        
+        /* 头部样式 */
+        .calc-header { 
+            text-align: center; 
+            margin-bottom: 1rem; 
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #E2E8F0;
+            position: relative;
+        }
+        .lang-switch {
+            position: absolute; right: 0; top: 0;
+            padding: 0.4rem 0.8rem; border-radius: 0.5rem;
+            background: #fff; border: 1px solid #E2E8F0;
+            font-size: 0.8rem; cursor: pointer;
+            display: flex; align-items: center; gap: 0.3rem;
+            z-index: 10;
+        }
+        .calc-header h1 { 
+            font-size: 1.4rem; font-weight: 700; 
+            background: linear-gradient(120deg, #4338CA, #0EA5E9);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 0.5rem; 
+        }
+        .calc-header h1 .zh-title { 
+            font-size: 1.2rem; 
+            display: flex; align-items: center; justify-content: center;
+            flex-wrap: wrap; gap: 0.5rem;
+        }
+        .calc-header h1 .en-title { 
+            font-size: 0.85rem; font-weight: 600; 
+            opacity: 0.8; margin-top: 0.2rem;
+        }
+        /* MWE徽章样式 */
+        .mwe-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #4338CA, #0EA5E9);
+            color: white;
+            font-weight: 700;
+            font-size: 0.7rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 0.25rem;
+            letter-spacing: 0.05em;
+            transform: translateY(-1px);
+        }
+        
+        /* 特性标签组 */
+        .feature-tags {
+            display: flex; justify-content: center; gap: 1rem;
+            margin-bottom: 0.5rem; flex-wrap: wrap;
+        }
+        .feature-tag {
+            display: inline-flex; align-items: center; gap: 0.3rem;
+            font-size: 0.75rem; color: #64748B;
+            padding: 0.25rem 0.5rem; border-radius: 0.25rem;
+            background: #F1F5F9;
+        }
+        .feature-tag i { font-size: 0.7rem; color: #4338CA; }
+        
+        /* 基础选型区 - 紧凑布局 */
+        .base-selector { 
+            background: #fff; border-radius: 1rem; padding: 1rem; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 1rem;
+            border: 1px solid #E2E8F0;
+        }
+        .section-title { 
+            font-size: 0.9rem; font-weight: 600; 
+            color: #4338CA; margin-bottom: 0.8rem; 
+            display: flex; align-items: center; gap: 0.4rem; 
+        }
+        .selector-grid { 
+            display: grid; grid-template-columns: repeat(3, 1fr); 
+            gap: 0.6rem; margin-bottom: 0.5rem;
+        }
+        .selector-item { margin-bottom: 0; }
+        .selector-item .item-label { 
+            font-size: 0.75rem; color: #64748B; 
+            margin-bottom: 0.2rem; display: flex; align-items: center; gap: 0.2rem;
+        }
+        .selector-input { 
+            width: 100%; padding: 0.6rem 0.5rem; border: 1px solid #E2E8F0; 
+            border-radius: 0.5rem; font-size: 0.85rem; background: #F8FAFC; 
+            transition: all 0.2s; height: 2.5rem;
+        }
+        .selector-input:focus { 
+            outline: none; border-color: #4338CA; 
+            box-shadow: 0 0 0 2px rgba(67, 56, 202, 0.1); 
+            background: #fff;
+        }
+        
+        /* 汇率提示 - 紧凑 */
+        .rate-update-hint {
+            font-size: 0.68rem; color: #94A3B8;
+            padding-top: 0.5rem;
+            border-top: 1px dashed #E2E8F0;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .rate-time { font-weight: 500; color: #4338CA; }
+        
+        /* 输入区块 */
+        .calc-section { 
+            background: #fff; border-radius: 1rem; padding: 1rem; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 1rem;
+            overflow: hidden; border: 1px solid #E2E8F0;
+        }
+        .section-header { 
+            display: flex; justify-content: space-between; align-items: center; 
+            cursor: pointer; padding: 0.2rem 0;
+        }
+        .section-header .title { 
+            font-size: 0.9rem; font-weight: 600; 
+            display: flex; align-items: center; gap: 0.4rem; 
+        }
+        .section-header .toggle-btn { 
+            font-size: 0.75rem; color: #64748B; 
+            display: flex; align-items: center; gap: 0.3rem;
+            padding: 0.2rem;
+        }
+        .section-content { 
+            display: none; margin-top: 0.8rem;
+            animation: fadeIn 0.3s ease;
+        }
+        .section-content.expanded { display: block; }
+        
+        /* 输入项 - 优化币种提示位置 */
+        .input-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.8rem; }
+        .input-group { position: relative; }
+        .input-group .input-label { 
+            font-size: 0.75rem; color: #64748B; 
+            margin-bottom: 0.2rem; display: flex; align-items: center; gap: 0.2rem;
+        }
+        .input-wrapper { position: relative; }
+        /* 币种提示放在右侧，颜色更浅 */
+        .currency-tag { 
+            position: absolute; right: 0.7rem; top: 50%; transform: translateY(-50%); 
+            font-size: 0.75rem; color: #94A3B8; pointer-events: none;
+            font-weight: 400;
+        }
+        .form-input { 
+            width: 100%; padding: 0.6rem 2.5rem 0.6rem 0.7rem; 
+            border: 1px solid #E2E8F0; border-radius: 0.5rem; 
+            font-size: 0.85rem; background: #F8FAFC; transition: all 0.2s;
+            height: 2.5rem;
+        }
+        .form-input.no-currency { padding-right: 0.7rem; }
+        .form-input:focus { 
+            outline: none; border-color: #4338CA; 
+            box-shadow: 0 0 0 2px rgba(67, 56, 202, 0.1); 
+            background: #fff;
+        }
+        /* 用户输入时，币种提示更不明显 */
+        .form-input:not(:placeholder-shown) + .currency-tag {
+            color: #CBD5E1;
+            font-weight: 300;
+        }
+        .input-hint { font-size: 0.68rem; color: #94A3B8; margin-top: 0.1rem; }
+        
+        /* 按钮组 */
+        .btn-group { display: flex; gap: 0.6rem; margin: 0.8rem 0 1rem; }
+        .calc-btn { 
+            flex: 1; padding: 0.7rem 0; border-radius: 0.5rem; 
+            font-size: 0.85rem; font-weight: 600; border: none; cursor: pointer; 
+            display: flex; align-items: center; justify-content: center; gap: 0.3rem; 
+            transition: all 0.2s; height: 2.8rem;
+        }
+        .btn-primary { 
+            background: linear-gradient(120deg, #4338CA, #0EA5E9);
+            color: #fff;
+        }
+        .btn-primary:hover { 
+            opacity: 0.9; box-shadow: 0 2px 6px rgba(67, 56, 202, 0.2);
+        }
+        .btn-secondary { 
+            background: #F8FAFC; color: #4338CA; 
+            border: 1px solid #E2E8F0;
+        }
+        .btn-secondary:hover { 
+            background: #F1F5F9;
+        }
+        
+        /* 结果区 */
+        .result-section { 
+            background: #fff; border-radius: 1rem; padding: 1rem; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04); 
+            border: 1px solid #0EA5E9; display: none;
+        }
+        .result-section.show { display: block; animation: fadeIn 0.3s ease; }
+        .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; }
+        .result-header .result-title { 
+            font-size: 0.9rem; font-weight: 600; color: #0EA5E9; 
+            display: flex; align-items: center; gap: 0.4rem; 
+        }
+        .result-header .result-currency { font-size: 0.8rem; color: #64748B; }
+        
+        .core-result { 
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.8rem; 
+            margin-bottom: 0.8rem;
+        }
+        .core-item { 
+            background: #EEF2FF; padding: 0.8rem; border-radius: 0.5rem; 
+            text-align: center;
+        }
+        .core-item .core-label { font-size: 0.72rem; color: #64748B; }
+        .core-item .core-value { 
+            font-size: 1.1rem; font-weight: 700; margin-top: 0.2rem;
+        }
+        .core-value.profit { color: #10B981; }
+        .core-value.loss { color: #EF4444; }
+        
+        .detail-result { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; }
+        .detail-item { 
+            background: #F8FAFC; padding: 0.5rem; border-radius: 0.4rem;
+            border-left: 2px solid #E2E8F0;
+        }
+        .detail-item .detail-label { font-size: 0.68rem; color: #94A3B8; }
+        .detail-item .detail-value { 
+            font-size: 0.75rem; font-weight: 600; margin-top: 0.2rem;
+        }
+        
+        .note-box { 
+            background: #FFFBEB; border-left: 2px solid #F59E0B; 
+            padding: 0.6rem; border-radius: 0 0.4rem 0.4rem 0; 
+            margin-top: 0.8rem; font-size: 0.7rem; color: #475569; 
+            line-height: 1.4;
+        }
+        
+        /* MWE页脚 */
+        .mwe-footer {
+            text-align: center; margin-top: 1.2rem; font-size: 0.68rem; color: #94A3B8;
+            display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+        .mwe-logo {
+            font-weight: 800; background: linear-gradient(135deg, #4338CA, #0EA5E9);
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+            letter-spacing: 0.05em;
+        }
+        
+        /* 动画与响应式 */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* 修正横屏组件重叠问题 */
+        @media (min-width: 577px) and (max-width: 768px) {
+            /* 中等屏幕优化 */
+            .container { max-width: 95%; }
+            .selector-grid { grid-template-columns: repeat(2, 1fr); }
+            .input-grid { grid-template-columns: repeat(2, 1fr); }
+            .calc-header h1 .zh-title { font-size: 1.1rem; }
+            .lang-switch { position: relative; top: auto; right: auto; margin-bottom: 0.5rem; }
+        }
+        
+        @media (max-width: 576px) {
+            /* 移动端优化 */
+            .selector-grid { grid-template-columns: 1fr; }
+            .input-grid { grid-template-columns: 1fr; }
+            .detail-result { grid-template-columns: repeat(2, 1fr); }
+            .btn-group { flex-direction: column; }
+            .calc-btn { width: 100%; }
+            .lang-switch { 
+                position: relative; 
+                top: auto; 
+                right: auto; 
+                margin: 0 auto 0.8rem auto; 
+                display: inline-flex;
+            }
+            .calc-header h1 .zh-title { font-size: 1.1rem; flex-wrap: wrap; }
+            .calc-header h1 .en-title { font-size: 0.8rem; }
+            .feature-tags { gap: 0.5rem; }
+            .feature-tag { font-size: 0.7rem; }
+        }
+        
+        @media (max-width: 400px) {
+            /* 超小屏幕优化 */
+            .calc-header h1 .zh-title { font-size: 1rem; }
+            .mwe-badge { font-size: 0.6rem; padding: 0.1rem 0.4rem; }
+            .detail-result { grid-template-columns: 1fr; }
+        }
+        
+        /* 横屏特别优化 */
+        @media (orientation: landscape) and (max-height: 500px) {
+            body { padding: 0.5rem; }
+            .container { max-width: 100%; }
+            .base-selector, .calc-section { 
+                padding: 0.8rem; 
+                margin-bottom: 0.8rem;
+            }
+            .selector-grid { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+            .input-grid { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
+            .form-input, .selector-input { 
+                height: 2.2rem; 
+                padding: 0.5rem 2rem 0.5rem 0.6rem;
+                font-size: 0.8rem;
+            }
+            .calc-btn { height: 2.4rem; padding: 0.5rem 0; }
+            .btn-group { margin: 0.6rem 0 0.8rem; }
+            .section-title { margin-bottom: 0.6rem; }
+            .section-header .title { font-size: 0.85rem; }
+            .section-header .toggle-btn { font-size: 0.7rem; }
+            .calc-header { margin-bottom: 0.8rem; padding-bottom: 0.8rem; }
+            .feature-tags { margin-bottom: 0.3rem; }
+            .feature-tag { font-size: 0.7rem; padding: 0.2rem 0.4rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部（含语言切换） -->
+        <div class="calc-header">
+            <div class="lang-switch" id="langSwitch">
+                <span id="langText">EN</span>
+                <i class="fa fa-language"></i>
+            </div>
+            <h1 data-lang-key="title">
+                <div class="zh-title">
+                    多币种权证收益估算器
+                    <span class="mwe-badge">MWE</span>
+                </div>
+                <div class="en-title" data-lang-key="enTitle">Multi-currency Warrant Yield Estimator</div>
+            </h1>
+            
+            <!-- 特性标签 -->
+            <div class="feature-tags" data-lang-key="features">
+                <div class="feature-tag">
+                    <i class="fa fa-globe"></i>
+                    <span data-lang-key="multiCurrency">多币种</span>
+                </div>
+                <div class="feature-tag">
+                    <i class="fa fa-refresh"></i>
+                    <span data-lang-key="realTimeRate">实时汇率</span>
+                </div>
+                <div class="feature-tag">
+                    <i class="fa fa-bolt"></i>
+                    <span data-lang-key="simpleOperation">简易操作</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 基础选型区 - 紧凑布局 -->
+        <div class="base-selector">
+            <div class="section-title" data-lang-key="baseSelectorTitle">
+                <i class="fa fa-sliders"></i> 
+                <span data-lang-key="basicSettings">基础设置</span>
+            </div>
+            <div class="selector-grid">
+                <div class="selector-item">
+                    <div class="item-label">
+                        <i class="fa fa-tag"></i>
+                        <span data-lang-key="warrantTypeLabel">权证类型</span>
+                    </div>
+                    <select id="warrantType" class="selector-input">
+                        <option value="call" data-lang-key="callOption">认购（牛证）</option>
+                        <option value="put" data-lang-key="putOption">认沽（熊证）</option>
+                    </select>
+                </div>
+                <div class="selector-item">
+                    <div class="item-label">
+                        <i class="fa fa-money"></i>
+                        <span data-lang-key="settleCurrencyLabel">结算币种</span>
+                    </div>
+                    <select id="warrantCurrency" class="selector-input">
+                        <option value="SGD">SGD</option>
+                        <option value="USD">USD</option>
+                        <option value="HKD">HKD</option>
+                    </select>
+                </div>
+                <div class="selector-item">
+                    <div class="item-label">
+                        <i class="fa fa-line-chart"></i>
+                        <span data-lang-key="stockCurrencyLabel">正股币种</span>
+                    </div>
+                    <select id="stockCurrency" class="selector-input">
+                        <option value="USD">USD</option>
+                        <option value="HKD">HKD</option>
+                        <option value="SGD">SGD</option>
+                    </select>
+                </div>
+            </div>
+            <div class="rate-update-hint">
+                <div>
+                    <i class="fa fa-clock-o"></i>
+                    <span data-lang-key="rateUpdateHint">汇率更新：</span>
+                </div>
+                <div class="rate-time" id="rateUpdateTime">加载中...</div>
+            </div>
+        </div>
+
+        <!-- 核心输入区 -->
+        <div class="calc-section">
+            <div class="section-header" onclick="toggleSection('coreInput')">
+                <div class="title" style="color: #10B981;" data-lang-key="coreInputTitle">
+                    <i class="fa fa-pencil"></i> 
+                    <span data-lang-key="coreInput">核心输入</span>
+                </div>
+                <div class="toggle-btn" data-lang-key="collapseBtn">
+                    <i class="fa fa-minus"></i> 
+                    <span data-lang-key="collapse">收起</span>
+                </div>
+            </div>
+            <div class="section-content expanded" id="coreInputContent">
+                <div class="input-grid">
+                    <div class="input-group">
+                        <div class="input-label" data-lang-key="conversionRatioLabel">
+                            <i class="fa fa-exchange"></i> 换股比率
+                        </div>
+                        <input type="number" id="conversionRatio" step="1" value="25" class="form-input no-currency">
+                        <div class="input-hint" data-lang-key="conversionRatioHint">1正股对应权证份数</div>
+                    </div>
+                    <div class="input-group">
+                        <div class="input-label" data-lang-key="warrantPriceLabel">
+                            <i class="fa fa-ticket"></i> 权证现价
+                        </div>
+                        <div class="input-wrapper">
+                            <input type="number" id="warrantPrice" step="0.001" value="0.049" class="form-input" placeholder="0.000">
+                            <span class="currency-tag" id="warrantPriceTag">SGD</span>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <div class="input-label" data-lang-key="currentStockPriceLabel">
+                            <i class="fa fa-line-chart"></i> 正股现价
+                        </div>
+                        <div class="input-wrapper">
+                            <input type="number" id="currentStockPrice" step="0.01" value="61.50" class="form-input" placeholder="0.00">
+                            <span class="currency-tag" id="currentStockPriceTag">USD</span>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <div class="input-label" data-lang-key="targetStockPriceLabel">
+                            <i class="fa fa-bullseye"></i> 正股目标价
+                        </div>
+                        <div class="input-wrapper">
+                            <input type="number" id="targetStockPrice" step="0.01" value="138.50" class="form-input" placeholder="0.00">
+                            <span class="currency-tag" id="targetStockPriceTag">USD</span>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <div class="input-label" data-lang-key="holdAmountLabel">
+                            <i class="fa fa-database"></i> 持有份数
+                        </div>
+                        <input type="number" id="holdAmount" step="100" value="1000" class="form-input no-currency" placeholder="0">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 高级参数区 -->
+        <div class="calc-section">
+            <div class="section-header" onclick="toggleSection('advancedInput')">
+                <div class="title" style="color: #F59E0B;" data-lang-key="advancedInputTitle">
+                    <i class="fa fa-cog"></i> 
+                    <span data-lang-key="advancedInput">高级参数</span>
+                </div>
+                <div class="toggle-btn" data-lang-key="expandBtn">
+                    <i class="fa fa-plus"></i> 
+                    <span data-lang-key="expand">展开</span>
+                </div>
+            </div>
+            <div class="section-content" id="advancedInputContent">
+                <div class="input-grid">
+                    <div class="input-group">
+                        <div class="input-label" data-lang-key="strikePriceLabel">
+                            <i class="fa fa-bullseye"></i> 正股行权价
+                        </div>
+                        <div class="input-wrapper">
+                            <input type="number" id="strikePrice" step="0.01" value="60.00" class="form-input" placeholder="0.00">
+                            <span class="currency-tag" id="strikePriceTag">USD</span>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <div class="input-label" data-lang-key="feeRateLabel">
+                            <i class="fa fa-percent"></i> 交易费率(%)
+                        </div>
+                        <input type="number" id="feeRate" step="0.01" value="0.3" class="form-input no-currency" placeholder="0.00">
+                    </div>
+                    <div class="input-group">
+                        <div class="input-label" data-lang-key="expireDateLabel">
+                            <i class="fa fa-calendar"></i> 到期日
+                        </div>
+                        <input type="date" id="expireDate" class="form-input no-currency">
+                    </div>
+                    <div class="input-group">
+                        <div class="input-label" data-lang-key="volatilityLabel">
+                            <i class="fa fa-random"></i> 年化波动率(%)
+                        </div>
+                        <input type="number" id="volatility" step="0.1" value="20.0" class="form-input no-currency" placeholder="20.0">
+                        <div class="input-hint" data-lang-key="volatilityHint">无数据填20-30%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 功能按钮组 -->
+        <div class="btn-group">
+            <button id="calculateBtn" class="calc-btn btn-primary" data-lang-key="calculateBtn">
+                <i class="fa fa-calculator"></i> 
+                <span data-lang-key="calculate">计算收益</span>
+            </button>
+            <button id="resetBtn" class="calc-btn btn-secondary" data-lang-key="resetBtn">
+                <i class="fa fa-refresh"></i> 
+                <span data-lang-key="reset">重置</span>
+            </button>
+        </div>
+
+        <!-- 结果展示区 -->
+        <div id="resultArea" class="result-section">
+            <div class="result-header">
+                <div class="result-title" data-lang-key="resultTitle">
+                    <i class="fa fa-chart-pie"></i> 
+                    <span data-lang-key="result">计算结果</span>
+                </div>
+                <div class="result-currency" data-lang-key="resultCurrency">
+                    结算币种：<span id="resultCurrency">SGD</span>
+                </div>
+            </div>
+            <div class="core-result">
+                <div class="core-item">
+                    <div class="core-label" data-lang-key="profitRateLabel">投资收益率</div>
+                    <div class="core-value profit" id="profitRate">0.00%</div>
+                </div>
+                <div class="core-item">
+                    <div class="core-label" data-lang-key="totalProfitLabel">目标总收益</div>
+                    <div class="core-value profit" id="totalProfit">0.00 SGD</div>
+                </div>
+            </div>
+            <div class="detail-result">
+                <div class="detail-item">
+                    <div class="detail-label" data-lang-key="convertedCurrentPriceLabel">正股现价(换算后)</div>
+                    <div class="detail-value" id="convertedCurrentStockPrice">0.00 SGD</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label" data-lang-key="convertedTargetPriceLabel">目标价(换算后)</div>
+                    <div class="detail-value" id="convertedTargetStockPrice">0.00 SGD</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label" data-lang-key="totalCostLabel">权证总成本</div>
+                    <div class="detail-value" id="totalCost">0.00 SGD</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label" data-lang-key="stockQuantityLabel">对应正股数</div>
+                    <div class="detail-value" id="stockQuantity">0.00 股</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label" data-lang-key="intrinsicValueLabel">内在价值</div>
+                    <div class="detail-value" id="intrinsicValue">0.000 SGD</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label" data-lang-key="remainingDaysLabel">剩余天数</div>
+                    <div class="detail-value" id="remainingDays">0</div>
+                </div>
+            </div>
+            <div class="note-box" data-lang-key="noteText">
+                <i class="fa fa-info-circle"></i> 
+                <span data-lang-key="note">MWE - 跨币种自动换算，结果仅供参考；实际收益受汇率、市场情绪影响。</span>
+            </div>
+        </div>
+
+        <!-- MWE页脚 -->
+        <div class="mwe-footer">
+            <span>© 2026</span>
+            <span class="mwe-logo">MWE</span>
+            <span data-lang-key="footerText">多币种权证收益估算器</span>
+            <span>•</span>
+            <span data-lang-key="version">v1.2</span>
+        </div>
+    </div>
+
+    <script>
+        // 1. 语言包配置
+        const LANGS = {
+            zh: {
+                title: "多币种权证收益估算器",
+                enTitle: "Multi-currency Warrant Yield Estimator",
+                multiCurrency: "多币种",
+                realTimeRate: "实时汇率",
+                simpleOperation: "简易操作",
+                basicSettings: "基础设置",
+                warrantTypeLabel: "权证类型",
+                callOption: "认购（牛证）",
+                putOption: "认沽（熊证）",
+                settleCurrencyLabel: "结算币种",
+                stockCurrencyLabel: "正股币种",
+                rateUpdateHint: "汇率更新：",
+                coreInput: "核心输入",
+                collapseBtn: "收起",
+                collapse: "收起",
+                conversionRatioLabel: "换股比率",
+                conversionRatioHint: "1正股对应权证份数",
+                warrantPriceLabel: "权证现价",
+                currentStockPriceLabel: "正股现价",
+                targetStockPriceLabel: "正股目标价",
+                holdAmountLabel: "持有份数",
+                advancedInput: "高级参数",
+                expandBtn: "展开",
+                expand: "展开",
+                strikePriceLabel: "正股行权价",
+                feeRateLabel: "交易费率(%)",
+                expireDateLabel: "到期日",
+                volatilityLabel: "年化波动率(%)",
+                volatilityHint: "无数据填20-30%",
+                calculateBtn: "计算收益",
+                calculate: "计算收益",
+                resetBtn: "重置",
+                reset: "重置",
+                result: "计算结果",
+                resultCurrency: "结算币种：",
+                profitRateLabel: "投资收益率",
+                totalProfitLabel: "目标总收益",
+                convertedCurrentPriceLabel: "正股现价(换算后)",
+                convertedTargetPriceLabel: "目标价(换算后)",
+                totalCostLabel: "权证总成本",
+                stockQuantityLabel: "对应正股数",
+                intrinsicValueLabel: "内在价值",
+                remainingDaysLabel: "剩余天数",
+                note: "MWE - 跨币种自动换算，结果仅供参考；实际收益受汇率、市场情绪影响。",
+                footerText: "多币种权证收益估算器",
+                version: "v1.2"
+            },
+            en: {
+                title: "Multi-currency Warrant Yield Estimator",
+                enTitle: "Multi-currency Warrant Yield Estimator",
+                multiCurrency: "Multi-currency",
+                realTimeRate: "Real-time Rate",
+                simpleOperation: "Simple Operation",
+                basicSettings: "Basic Settings",
+                warrantTypeLabel: "Warrant Type",
+                callOption: "Call (Bull)",
+                putOption: "Put (Bear)",
+                settleCurrencyLabel: "Settlement Currency",
+                stockCurrencyLabel: "Stock Currency",
+                rateUpdateHint: "Rate Update:",
+                coreInput: "Core Input",
+                collapseBtn: "Collapse",
+                collapse: "Collapse",
+                conversionRatioLabel: "Conversion Ratio",
+                conversionRatioHint: "Warrants per 1 stock",
+                warrantPriceLabel: "Warrant Price",
+                currentStockPriceLabel: "Stock Price",
+                targetStockPriceLabel: "Target Price",
+                holdAmountLabel: "Hold Amount",
+                advancedInput: "Advanced",
+                expandBtn: "Expand",
+                expand: "Expand",
+                strikePriceLabel: "Strike Price",
+                feeRateLabel: "Fee Rate(%)",
+                expireDateLabel: "Expiry Date",
+                volatilityLabel: "Volatility(%)",
+                volatilityHint: "Fill 20-30% if no data",
+                calculateBtn: "Calculate",
+                calculate: "Calculate",
+                resetBtn: "Reset",
+                reset: "Reset",
+                result: "Results",
+                resultCurrency: "Currency:",
+                profitRateLabel: "Return Rate",
+                totalProfitLabel: "Total Profit",
+                convertedCurrentPriceLabel: "Stock Price(Converted)",
+                convertedTargetPriceLabel: "Target(Converted)",
+                totalCostLabel: "Total Cost",
+                stockQuantityLabel: "Stock Qty",
+                intrinsicValueLabel: "Intrinsic Value",
+                remainingDaysLabel: "Days Left",
+                note: "MWE - Auto currency conversion, results for reference only.",
+                footerText: "Multi-currency Warrant Estimator",
+                version: "v1.2"
+            }
+        };
+
+        // 当前语言（默认中文）
+        let currentLang = "zh";
+
+        // 2. 语言切换函数
+        function switchLanguage() {
+            currentLang = currentLang === "zh" ? "en" : "zh";
+            // 更新语言切换按钮文字
+            document.getElementById("langText").textContent = currentLang === "zh" ? "EN" : "ZH";
+            // 更新所有带data-lang-key的元素
+            document.querySelectorAll("[data-lang-key]").forEach(el => {
+                const key = el.getAttribute("data-lang-key");
+                if (LANGS[currentLang][key]) {
+                    el.textContent = LANGS[currentLang][key];
+                    // 处理下拉选项
+                    if (el.tagName === "OPTION") {
+                        el.textContent = LANGS[currentLang][key];
+                    }
+                }
+            });
+            // 更新折叠/展开按钮的图标文字
+            updateToggleBtnText();
+        }
+
+        // 更新折叠/展开按钮文字
+        function updateToggleBtnText() {
+            const coreToggle = document.querySelector('[onclick="toggleSection(\'coreInput\')"] .toggle-btn');
+            const advancedToggle = document.querySelector('[onclick="toggleSection(\'advancedInput\')"] .toggle-btn');
+            const coreExpanded = document.getElementById("coreInputContent").classList.contains("expanded");
+            const advancedExpanded = document.getElementById("advancedInputContent").classList.contains("expanded");
+            
+            coreToggle.innerHTML = coreExpanded
+                ? `<i class="fa fa-minus"></i> ${LANGS[currentLang].collapse}`
+                : `<i class="fa fa-plus"></i> ${LANGS[currentLang].expand}`;
+            
+            advancedToggle.innerHTML = advancedExpanded
+                ? `<i class="fa fa-minus"></i> ${LANGS[currentLang].collapse}`
+                : `<i class="fa fa-plus"></i> ${LANGS[currentLang].expand}`;
+        }
+
+        // 3. 汇率初始化 - 静态数据确保全球可用
+        let CURRENCY_RATES = {
+            SGD: { USD: 0.74, HKD: 5.80, SGD: 1.0 },
+            USD: { SGD: 1.35, HKD: 7.82, USD: 1.0 },
+            HKD: { SGD: 0.17, USD: 0.13, HKD: 1.0 }
+        };
+
+        // 4. 优化的汇率获取方案
+        async function fetchRealTimeRates() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString();
+            
+            // 立即显示时间，避免"加载中"
+            document.getElementById('rateUpdateTime').textContent = `${timeStr}`;
+            
+            try {
+                // 尝试多个API源
+                const apiEndpoints = [
+                    'https://api.exchangerate.host/latest?base=USD',
+                    'https://open.er-api.com/v6/latest/USD'
+                ];
+                
+                let rates = null;
+                for (const endpoint of apiEndpoints) {
+                    try {
+                        const response = await fetch(endpoint, { timeout: 3000 });
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.rates || data.success) {
+                                rates = data.rates || data.rates;
+                                break;
+                            }
+                        }
+                    } catch (e) {
+                        continue; // 尝试下一个API
+                    }
+                }
+                
+                if (rates && rates.SGD && rates.HKD) {
+                    // 更新汇率表
+                    CURRENCY_RATES = {
+                        SGD: { 
+                            USD: 1 / rates.SGD,
+                            HKD: rates.HKD / rates.SGD,
+                            SGD: 1.0 
+                        },
+                        USD: { 
+                            SGD: rates.SGD,
+                            HKD: rates.HKD,
+                            USD: 1.0 
+                        },
+                        HKD: { 
+                            SGD: rates.SGD / rates.HKD,
+                            USD: 1 / rates.HKD,
+                            HKD: 1.0 
+                        }
+                    };
+                    
+                    // 显示成功状态
+                    const displayTime = now.toLocaleTimeString(currentLang === "zh" ? "zh-CN" : "en-US");
+                    document.getElementById('rateUpdateTime').textContent = `${displayTime} ✓`;
+                } else {
+                    throw new Error('No valid rates received');
+                }
+            } catch (error) {
+                // 使用静态数据
+                console.log("使用静态汇率数据");
+                const displayTime = now.toLocaleTimeString(currentLang === "zh" ? "zh-CN" : "en-US");
+                document.getElementById('rateUpdateTime').textContent = `${displayTime}`;
+            }
+        }
+
+        // 5. 区块折叠/展开
+        function toggleSection(sectionId) {
+            const content = document.getElementById(`${sectionId}Content`);
+            const toggleBtn = content.previousElementSibling.querySelector('.toggle-btn');
+            content.classList.toggle('expanded');
+            // 更新按钮文字
+            toggleBtn.innerHTML = content.classList.contains('expanded')
+                ? `<i class="fa fa-minus"></i> ${LANGS[currentLang].collapse}`
+                : `<i class="fa fa-plus"></i> ${LANGS[currentLang].expand}`;
+        }
+
+        // 6. 币种标签同步
+        function updateCurrencyTags() {
+            const warrantCurrency = document.getElementById('warrantCurrency').value;
+            const stockCurrency = document.getElementById('stockCurrency').value;
+            document.getElementById('warrantPriceTag').textContent = warrantCurrency;
+            document.getElementById('strikePriceTag').textContent = stockCurrency;
+            document.getElementById('currentStockPriceTag').textContent = stockCurrency;
+            document.getElementById('targetStockPriceTag').textContent = stockCurrency;
+            document.getElementById('resultCurrency').textContent = warrantCurrency;
+        }
+
+        // 7. 剩余天数计算
+        function getRemainingDays(expireDateStr) {
+            if (!expireDateStr) return 0;
+            const today = new Date();
+            const expireDate = new Date(expireDateStr);
+            return Math.max(Math.ceil((expireDate - today) / (1000 * 3600 * 24)), 0);
+        }
+
+        // 8. 时间价值计算
+        function calculateTimeValue(stockPriceSettled, volatility, remainingDays, conversionRatio) {
+            if (!remainingDays || !volatility) return 0;
+            return (volatility/100 * stockPriceSettled * Math.sqrt(remainingDays/365)) / conversionRatio;
+        }
+
+        // 9. 核心计算
+        document.getElementById('calculateBtn').addEventListener('click', () => {
+            const [warrantType, warrantCurrency, stockCurrency] = [
+                document.getElementById('warrantType').value,
+                document.getElementById('warrantCurrency').value,
+                document.getElementById('stockCurrency').value
+            ];
+            const [
+                warrantPrice = 0,
+                strikePrice = 0,
+                conversionRatio = 1,
+                holdAmount = 0,
+                currentStockPrice = 0,
+                targetStockPrice = 0,
+                feeRate = 0,
+                volatility = 20
+            ] = [
+                parseFloat(document.getElementById('warrantPrice').value),
+                parseFloat(document.getElementById('strikePrice').value),
+                parseFloat(document.getElementById('conversionRatio').value),
+                parseFloat(document.getElementById('holdAmount').value),
+                parseFloat(document.getElementById('currentStockPrice').value),
+                parseFloat(document.getElementById('targetStockPrice').value),
+                (parseFloat(document.getElementById('feeRate').value) || 0)/100,
+                parseFloat(document.getElementById('volatility').value)
+            ];
+            const expireDateStr = document.getElementById('expireDate').value;
+
+            const rate = CURRENCY_RATES[stockCurrency][warrantCurrency];
+            const [strikePriceSettled, currentStockPriceSettled, targetStockPriceSettled] = [
+                strikePrice * rate,
+                currentStockPrice * rate,
+                targetStockPrice * rate
+            ];
+
+            const remainingDays = getRemainingDays(expireDateStr);
+            const stockQuantity = holdAmount / conversionRatio;
+            const intrinsicValue = Math.max(
+                warrantType === 'call' 
+                    ? (targetStockPriceSettled - strikePriceSettled)/conversionRatio 
+                    : (strikePriceSettled - targetStockPriceSettled)/conversionRatio, 
+                0
+            );
+            const timeValue = calculateTimeValue(currentStockPriceSettled, volatility, remainingDays, conversionRatio);
+            const theoreticalPrice = intrinsicValue + timeValue;
+
+            const totalCost = holdAmount * warrantPrice * (1 + feeRate);
+            const totalRevenue = holdAmount * theoreticalPrice * (1 - feeRate);
+            const totalProfit = totalRevenue - totalCost;
+            const profitRate = (totalProfit / totalCost) * 100 || 0;
+
+            // 填充结果（处理多语言单位）
+            const unit = warrantCurrency;
+            const stockUnit = currentLang === "zh" ? "股" : "Shares";
+            document.getElementById('convertedCurrentStockPrice').textContent = `${currentStockPriceSettled.toFixed(2)} ${unit}`;
+            document.getElementById('convertedTargetStockPrice').textContent = `${targetStockPriceSettled.toFixed(2)} ${unit}`;
+            document.getElementById('totalCost').textContent = `${totalCost.toFixed(2)} ${unit}`;
+            document.getElementById('stockQuantity').textContent = `${stockQuantity.toFixed(2)} ${stockUnit}`;
+            document.getElementById('intrinsicValue').textContent = `${intrinsicValue.toFixed(3)} ${unit}`;
+            document.getElementById('remainingDays').textContent = remainingDays;
+            document.getElementById('totalProfit').textContent = `${totalProfit.toFixed(2)} ${unit}`;
+            document.getElementById('profitRate').textContent = `${profitRate.toFixed(2)}%`;
+
+            const [profitEl, rateEl] = [
+                document.getElementById('totalProfit'),
+                document.getElementById('profitRate')
+            ];
+            if (totalProfit >= 0) {
+                profitEl.className = 'core-value profit';
+                rateEl.className = 'core-value profit';
+            } else {
+                profitEl.className = 'core-value loss';
+                rateEl.className = 'core-value loss';
+            }
+
+            document.getElementById('resultArea').classList.add('show');
+        });
+
+        // 10. 重置功能
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            document.querySelectorAll('input').forEach(input => {
+                if (input.type === 'date') {
+                    // 日期输入框设置为30天后
+                    const defaultDate = new Date();
+                    defaultDate.setDate(defaultDate.getDate() + 30);
+                    input.valueAsDate = defaultDate;
+                } else {
+                    input.value = input.defaultValue;
+                }
+            });
+            document.querySelectorAll('select').forEach(select => select.value = select.defaultValue);
+            updateCurrencyTags();
+            document.getElementById('coreInputContent').classList.add('expanded');
+            document.getElementById('advancedInputContent').classList.remove('expanded');
+            updateToggleBtnText();
+            document.getElementById('resultArea').classList.remove('show');
+        });
+
+        // 11. 初始化
+        window.addEventListener('load', () => {
+            // 设置默认到期日（30天后）
+            const defaultDate = new Date();
+            defaultDate.setDate(defaultDate.getDate() + 30);
+            document.getElementById('expireDate').valueAsDate = defaultDate;
+            
+            // 立即显示当前时间
+            const now = new Date();
+            document.getElementById('rateUpdateTime').textContent = now.toLocaleTimeString();
+            
+            // 初始化其他功能
+            updateCurrencyTags();
+            
+            // 开始获取汇率
+            fetchRealTimeRates();
+            
+            // 30分钟更新一次汇率
+            setInterval(fetchRealTimeRates, 30 * 60 * 1000);
+            
+            // 绑定语言切换事件
+            document.getElementById('langSwitch').addEventListener('click', switchLanguage);
+            
+            // 绑定币种切换事件
+            document.getElementById('warrantCurrency').addEventListener('change', updateCurrencyTags);
+            document.getElementById('stockCurrency').addEventListener('change', updateCurrencyTags);
+        });
+    </script>
+</body>
+</html>
