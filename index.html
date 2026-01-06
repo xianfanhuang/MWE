@@ -1,0 +1,1693 @@
+<! DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="多币种权证收益估算器 - 实时汇率转换，智能收益计算">
+    <meta name="theme-color" content="#4338CA">
+    <title>MWE | 多币种权证收益估算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter: wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>">
+    
+    <style>
+        /* ===== 重置与基础样式 ===== */
+        * {
+            margin:  0;
+            padding: 0;
+            box-sizing:  border-box;
+        }
+
+        html {
+            font-size: 16px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background:  linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+            min-height: 100vh;
+            padding: 1rem;
+            color: #1E293B;
+            line-height: 1.6;
+        }
+
+        . container {
+            max-width:  720px;
+            margin: 0 auto;
+        }
+
+        /* ===== 头部区域 ===== */
+        .calc-header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            padding:  1.5rem 1. 2rem;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 1rem;
+            border: 1px solid rgba(226, 232, 240, 0.6);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+            position: relative;
+        }
+
+        /* 语言切换按钮 */
+        .lang-switch {
+            position: absolute;
+            right: 1.2rem;
+            top: 1.2rem;
+            padding: 0.5rem 0.9rem;
+            border-radius: 0.5rem;
+            background: #fff;
+            border: 1px solid #E2E8F0;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            z-index: 10;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            font-weight: 600;
+        }
+
+        .lang-switch:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-color: #4338CA;
+        }
+
+        .lang-switch: active {
+            transform: translateY(0);
+        }
+
+        /* 标题样式 */
+        .calc-header h1 {
+            font-size: 1.5rem;
+            font-weight:  700;
+            margin-bottom: 0.8rem;
+            letter-spacing: -0.02em;
+        }
+
+        .calc-header h1 .zh-title {
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            background: linear-gradient(120deg, #4338CA, #0EA5E9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .calc-header h1 .en-title {
+            font-size: 0.85rem;
+            font-weight:  500;
+            opacity: 0.7;
+            margin-top: 0.3rem;
+            color: #64748B;
+        }
+
+        /* MWE 徽章 */
+        .mwe-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #4338CA, #0EA5E9);
+            color: white;
+            font-weight: 800;
+            font-size: 0.7rem;
+            padding: 0.2rem 0.55rem;
+            border-radius:  0.3rem;
+            letter-spacing: 0.05em;
+            box-shadow: 0 2px 8px rgba(67, 56, 202, 0.2);
+            flex-shrink: 0;
+        }
+
+        /* 特性标签组 */
+        .feature-tags {
+            display: flex;
+            justify-content: center;
+            gap: 0.8rem;
+            margin-top: 0.8rem;
+            flex-wrap:  wrap;
+        }
+
+        . feature-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.75rem;
+            color: #4338CA;
+            padding: 0.35rem 0.7rem;
+            border-radius:  0.4rem;
+            background: linear-gradient(135deg, rgba(67, 56, 202, 0.08), rgba(14, 165, 233, 0.08));
+            border: 1px solid rgba(67, 56, 202, 0.2);
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        . feature-tag:hover {
+            background: linear-gradient(135deg, rgba(67, 56, 202, 0.12), rgba(14, 165, 233, 0.12));
+            transform: translateY(-2px);
+        }
+
+        . feature-tag i {
+            font-size: 0.75rem;
+            color: #4338CA;
+        }
+
+        /* ===== 基础选型区 ===== */
+        .base-selector {
+            background: #fff;
+            border-radius: 1rem;
+            padding: 1.2rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            margin-bottom: 1rem;
+            border: 1px solid #E2E8F0;
+            transition: all 0.2s ease;
+        }
+
+        .base-selector:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            border-color: #D0D9E8;
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #4338CA;
+            margin-bottom: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        . section-title i {
+            color: #4338CA;
+            font-size:  0.85rem;
+        }
+
+        /* 选择器网格 */
+        .selector-grid {
+            display: grid;
+            grid-template-columns:  repeat(3, 1fr);
+            gap: 0.8rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .selector-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .selector-item . item-label {
+            font-size: 0.75rem;
+            color: #64748B;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+            display: flex;
+            align-items: center;
+            gap:  0.2rem;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        . selector-input {
+            width: 100%;
+            padding:  0.7rem 0.6rem;
+            border: 1. 5px solid #E2E8F0;
+            border-radius: 0.6rem;
+            font-size:  0.85rem;
+            background: #F8FAFC;
+            transition: all 0.2s ease;
+            height: 2. 6rem;
+            font-weight: 500;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 0.6rem center;
+            background-size: 1.2em;
+            padding-right: 2. 4rem;
+        }
+
+        .selector-input:hover {
+            border-color: #CBD5E1;
+            background-color: #F1F5F9;
+        }
+
+        .selector-input:focus {
+            outline: none;
+            border-color: #4338CA;
+            box-shadow:  0 0 0 3px rgba(67, 56, 202, 0.1);
+            background-color: #fff;
+        }
+
+        /* 汇率提示 */
+        .rate-update-hint {
+            font-size: 0.75rem;
+            color: #94A3B8;
+            padding: 0.7rem 0.8rem;
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.04), rgba(67, 56, 202, 0.04));
+            border-radius: 0.5rem;
+            border-left: 3px solid #0EA5E9;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 500;
+        }
+
+        . rate-time {
+            color: #0EA5E9;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ===== 计算区块 ===== */
+        . calc-section {
+            background: #fff;
+            border-radius: 1rem;
+            padding: 1.2rem;
+            box-shadow:  0 2px 8px rgba(0, 0, 0, 0.04);
+            margin-bottom: 1rem;
+            border: 1px solid #E2E8F0;
+            transition: all 0.2s ease;
+            overflow: hidden;
+        }
+
+        .calc-section:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            border-color: #D0D9E8;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            padding: 0.3rem 0;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .section-header:hover . title {
+            color: #2563EB;
+        }
+
+        .section-header . title {
+            font-size:  0.95rem;
+            font-weight:  600;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: all 0.2s ease;
+        }
+
+        .section-header .toggle-btn {
+            font-size: 0.75rem;
+            color: #94A3B8;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.3rem 0.5rem;
+            border-radius:  0.3rem;
+            background: #F1F5F9;
+            transition: all 0.2s ease;
+        }
+
+        .section-header:hover .toggle-btn {
+            background: #E2E8F0;
+        }
+
+        .section-content {
+            display: none;
+            margin-top: 1rem;
+            animation: slideDown 0.3s ease;
+        }
+
+        .section-content.expanded {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform:  translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== 输入字段 ===== */
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        . input-group {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-label {
+            font-size: 0.75rem;
+            color: #64748B;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.2rem;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .input-label i {
+            font-size: 0.7rem;
+        }
+
+        .input-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .currency-tag {
+            position: absolute;
+            right: 0.8rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.75rem;
+            color: #94A3B8;
+            pointer-events: none;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            transition: all 0.2s ease;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 2. 5rem 0.75rem 0.85rem;
+            border: 1.5px solid #E2E8F0;
+            border-radius: 0.6rem;
+            font-size: 0.85rem;
+            background: #F8FAFC;
+            transition: all 0.2s ease;
+            height: 2.6rem;
+            font-weight: 500;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .form-input. no-currency {
+            padding-right: 0.85rem;
+        }
+
+        . form-input:hover {
+            border-color: #CBD5E1;
+            background-color: #F1F5F9;
+        }
+
+        . form-input:focus {
+            outline: none;
+            border-color: #4338CA;
+            box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.1);
+            background-color: #fff;
+        }
+
+        .form-input:focus + .currency-tag {
+            color: #4338CA;
+        }
+
+        .form-input:: placeholder {
+            color: #CBD5E1;
+        }
+
+        . input-hint {
+            font-size: 0.7rem;
+            color: #94A3B8;
+            margin-top: 0.2rem;
+            font-style: italic;
+        }
+
+        /* ===== 按钮组 ===== */
+        . btn-group {
+            display:  flex;
+            gap: 0.8rem;
+            margin:  1rem 0 1. 2rem 0;
+        }
+
+        .calc-btn {
+            flex: 1;
+            padding:  0.8rem 0;
+            border-radius: 0.6rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            transition: all 0.2s ease;
+            height: 2.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            position: relative;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .calc-btn:: before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left:  -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.2);
+            transition: left 0.3s ease;
+            pointer-events: none;
+        }
+
+        .calc-btn:hover::before {
+            left: 100%;
+        }
+
+        . btn-primary {
+            background: linear-gradient(120deg, #4338CA, #0EA5E9);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(67, 56, 202, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(67, 56, 202, 0.4);
+        }
+
+        .btn-primary: active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: #F8FAFC;
+            color:  #4338CA;
+            border: 1.5px solid #E2E8F0;
+        }
+
+        .btn-secondary:hover {
+            background: #F1F5F9;
+            border-color: #CBD5E1;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary:active {
+            transform: translateY(0);
+        }
+
+        /* ===== 结果区 ===== */
+        .result-section {
+            background: linear-gradient(135deg, #fff 0%, #F8FAFC 100%);
+            border-radius: 1rem;
+            padding: 1.2rem;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+            border: 1.5px solid #0EA5E9;
+            display: none;
+            animation: slideUp 0.4s ease;
+        }
+
+        .result-section.show {
+            display: block;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        . result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom:  2px solid #E2E8F0;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .result-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #0EA5E9;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        . result-currency {
+            font-size: 0.75rem;
+            color: #94A3B8;
+            font-weight: 600;
+            background: #EEF2FF;
+            padding: 0.3rem 0.6rem;
+            border-radius:  0.3rem;
+        }
+
+        .core-result {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .core-item {
+            background: linear-gradient(135deg, #EEF2FF 0%, #F0EDFF 100%);
+            padding: 1rem;
+            border-radius: 0.8rem;
+            text-align: center;
+            border: 1px solid rgba(67, 56, 202, 0.2);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .core-item:: before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width:  60px;
+            height: 60px;
+            background: linear-gradient(135deg, rgba(67, 56, 202, 0.1), transparent);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .core-item:hover {
+            transform: translateY(-4px);
+            box-shadow:  0 4px 12px rgba(67, 56, 202, 0.15);
+        }
+
+        .core-label {
+            font-size: 0.73rem;
+            color: #64748B;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .core-value {
+            font-size: 1.3rem;
+            font-weight:  800;
+            margin-top: 0.4rem;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .core-value. profit {
+            color: #10B981;
+            text-shadow: 0 2px 4px rgba(16, 185, 129, 0.1);
+        }
+
+        .core-value.loss {
+            color: #EF4444;
+            text-shadow:  0 2px 4px rgba(239, 68, 68, 0.1);
+        }
+
+        .detail-result {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.8rem;
+            margin-bottom: 1rem;
+        }
+
+        .detail-item {
+            background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+            padding:  0.8rem;
+            border-radius: 0.6rem;
+            border-left: 3px solid #4338CA;
+            transition: all 0.2s ease;
+        }
+
+        .detail-item:hover {
+            transform: translateX(4px);
+            box-shadow:  0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .detail-label {
+            font-size: 0.7rem;
+            color: #94A3B8;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .detail-value {
+            font-size: 0.8rem;
+            font-weight:  700;
+            margin-top: 0.3rem;
+            color: #1E293B;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .note-box {
+            background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+            border-left: 3px solid #F59E0B;
+            padding:  0.8rem 0. 9rem;
+            border-radius: 0 0.6rem 0.6rem 0;
+            margin-top: 1rem;
+            font-size: 0.72rem;
+            color: #78350F;
+            line-height: 1.5;
+            font-weight: 500;
+            border:  1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        . note-box i {
+            color: #F59E0B;
+            margin-right: 0.3rem;
+        }
+
+        /* ===== 页脚 ===== */
+        . mwe-footer {
+            text-align: center;
+            margin-top: 1. 5rem;
+            font-size: 0.7rem;
+            color: #94A3B8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            font-weight: 500;
+        }
+
+        .mwe-logo {
+            font-weight: 800;
+            background: linear-gradient(135deg, #4338CA, #0EA5E9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 0.05em;
+            font-size: 0.8rem;
+        }
+
+        /* ===== 响应式设计 ===== */
+        @media (min-width: 577px) and (max-width: 768px) {
+            .container {
+                max-width: 95%;
+            }
+
+            .selector-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .input-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .detail-result {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .calc-header h1 . zh-title {
+                font-size: 1.15rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            body {
+                padding: 0.75rem;
+            }
+
+            . container {
+                max-width: 100%;
+            }
+
+            . calc-header {
+                padding: 1rem;
+                margin-bottom: 1rem;
+            }
+
+            .lang-switch {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin:  0 auto 0.8rem auto;
+                display: inline-flex;
+            }
+
+            .selector-grid {
+                grid-template-columns: 1fr;
+                gap: 0.6rem;
+            }
+
+            . input-grid {
+                grid-template-columns: 1fr;
+                gap: 0.8rem;
+            }
+
+            . detail-result {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .btn-group {
+                flex-direction: column;
+                gap: 0.6rem;
+            }
+
+            . calc-btn {
+                width:  100%;
+                height: 2.6rem;
+            }
+
+            .calc-header h1 .zh-title {
+                font-size: 1.1rem;
+            }
+
+            . feature-tags {
+                gap: 0.5rem;
+            }
+
+            . feature-tag {
+                font-size: 0.7rem;
+            }
+
+            .core-result {
+                grid-template-columns: 1fr;
+            }
+
+            .base-selector,
+            .calc-section {
+                padding: 1rem;
+                margin-bottom: 0.8rem;
+            }
+
+            .result-section {
+                padding: 1rem;
+            }
+        }
+
+        @media (max-width: 400px) {
+            body {
+                padding: 0.5rem;
+            }
+
+            .calc-header h1 .zh-title {
+                font-size: 1rem;
+            }
+
+            .mwe-badge {
+                font-size: 0.6rem;
+                padding: 0.1rem 0.4rem;
+            }
+
+            .detail-result {
+                grid-template-columns: 1fr;
+            }
+
+            .selector-item . item-label {
+                font-size: 0.7rem;
+            }
+
+            . selector-input {
+                height: 2.4rem;
+                padding: 0.6rem 2. 2rem 0.6rem 0.5rem;
+            }
+
+            . form-input {
+                height: 2.4rem;
+                padding: 0.6rem 2.2rem 0.6rem 0.5rem;
+            }
+
+            .core-value {
+                font-size: 1.1rem;
+            }
+        }
+
+        @media (orientation: landscape) and (max-height: 500px) {
+            body {
+                padding: 0.5rem;
+            }
+
+            .container {
+                max-width: 100%;
+            }
+
+            . base-selector,
+            .calc-section {
+                padding: 0.8rem;
+                margin-bottom: 0.6rem;
+            }
+
+            . selector-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 0.5rem;
+            }
+
+            . input-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.6rem;
+            }
+
+            .form-input,
+            .selector-input {
+                height: 2.2rem;
+                padding: 0.4rem 1.8rem 0.4rem 0.5rem;
+                font-size: 0.75rem;
+            }
+
+            . calc-btn {
+                height: 2.3rem;
+                padding: 0.4rem 0;
+                font-size: 0.75rem;
+            }
+
+            . btn-group {
+                margin:  0.5rem 0 0.6rem 0;
+                gap: 0.5rem;
+            }
+
+            . section-title {
+                margin-bottom: 0.6rem;
+            }
+
+            .section-header . title {
+                font-size:  0.85rem;
+            }
+
+            .calc-header {
+                margin-bottom: 0.8rem;
+                padding:  0.8rem;
+            }
+
+            .feature-tags {
+                margin-bottom: 0.3rem;
+            }
+        }
+
+        /* ===== 打印样式 ===== */
+        @media print {
+            body {
+                background: white;
+            }
+
+            .lang-switch,
+            .btn-group {
+                display: none;
+            }
+
+            .calc-section,
+            .base-selector {
+                page-break-inside: avoid;
+                box-shadow: none;
+            }
+        }
+
+        /* ===== 深色模式支持 ===== */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+                color: #e2e8f0;
+            }
+
+            .calc-header,
+            .base-selector,
+            .calc-section,
+            .result-section {
+                background: #1e293b;
+                border-color: #334155;
+            }
+
+            . calc-header: hover,
+            .base-selector:hover,
+            .calc-section:hover {
+                border-color: #475569;
+            }
+
+            . selector-input,
+            .form-input {
+                background: #334155;
+                border-color: #475569;
+                color: #e2e8f0;
+            }
+
+            . selector-input:hover,
+            .form-input:hover {
+                background: #475569;
+            }
+
+            .feature-tag {
+                background: rgba(67, 56, 202, 0.15);
+            }
+
+            .core-item {
+                background: rgba(67, 56, 202, 0.1);
+            }
+
+            .detail-item {
+                background: #334155;
+            }
+
+            . lang-switch {
+                background: #1e293b;
+                color: #e2e8f0;
+            }
+        }
+
+        /* ===== 无障碍焦点样式 ===== */
+        *:focus-visible {
+            outline: 2px solid #4338CA;
+            outline-offset: 2px;
+        }
+
+        button:focus-visible {
+            outline: 2px solid #fff;
+            outline-offset: 2px;
+        }
+
+        /* ===== 加载动画 ===== */
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading {
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部（含语言切换） -->
+        <div class="calc-header">
+            <button class="lang-switch" id="langSwitch" aria-label="切换语言" title="Toggle Language">
+                <span id="langText">EN</span>
+                <i class="fa fa-language" aria-hidden="true"></i>
+            </button>
+            <h1 data-lang-key="title">
+                <div class="zh-title">
+                    多币种权证收益估算器
+                    <span class="mwe-badge" aria-label="MWE 官方应用">MWE</span>
+                </div>
+                <div class="en-title" data-lang-key="enTitle">Multi-currency Warrant Yield Estimator</div>
+            </h1>
+
+            <!-- 特性标签 -->
+            <div class="feature-tags" data-lang-key="features" role="list">
+                <div class="feature-tag" role="listitem">
+                    <i class="fa fa-globe" aria-hidden="true"></i>
+                    <span data-lang-key="multiCurrency">多币种</span>
+                </div>
+                <div class="feature-tag" role="listitem">
+                    <i class="fa fa-refresh" aria-hidden="true"></i>
+                    <span data-lang-key="realTimeRate">实时汇率</span>
+                </div>
+                <div class="feature-tag" role="listitem">
+                    <i class="fa fa-bolt" aria-hidden="true"></i>
+                    <span data-lang-key="simpleOperation">简易操作</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 基础选型区 -->
+        <div class="base-selector" role="region" aria-label="基础设置">
+            <div class="section-title" data-lang-key="baseSelectorTitle">
+                <i class="fa fa-sliders" aria-hidden="true"></i>
+                <span data-lang-key="basicSettings">基础设置</span>
+            </div>
+            <div class="selector-grid">
+                <div class="selector-item">
+                    <label class="item-label" for="warrantType">
+                        <i class="fa fa-tag" aria-hidden="true"></i>
+                        <span data-lang-key="warrantTypeLabel">权证类型</span>
+                    </label>
+                    <select id="warrantType" class="selector-input" aria-label="权证类型">
+                        <option value="call" data-lang-key="callOption">认购（牛证）</option>
+                        <option value="put" data-lang-key="putOption">认沽（熊证）</option>
+                    </select>
+                </div>
+                <div class="selector-item">
+                    <label class="item-label" for="warrantCurrency">
+                        <i class="fa fa-money" aria-hidden="true"></i>
+                        <span data-lang-key="settleCurrencyLabel">结算币种</span>
+                    </label>
+                    <select id="warrantCurrency" class="selector-input" aria-label="结算币种">
+                        <option value="SGD">SGD</option>
+                        <option value="USD">USD</option>
+                        <option value="HKD">HKD</option>
+                    </select>
+                </div>
+                <div class="selector-item">
+                    <label class="item-label" for="stockCurrency">
+                        <i class="fa fa-line-chart" aria-hidden="true"></i>
+                        <span data-lang-key="stockCurrencyLabel">正股币种</span>
+                    </label>
+                    <select id="stockCurrency" class="selector-input" aria-label="正股币种">
+                        <option value="USD">USD</option>
+                        <option value="HKD">HKD</option>
+                        <option value="SGD">SGD</option>
+                    </select>
+                </div>
+            </div>
+            <div class="rate-update-hint" role="status" aria-live="polite">
+                <div>
+                    <i class="fa fa-clock-o" aria-hidden="true"></i>
+                    <span data-lang-key="rateUpdateHint">汇率更新</span>
+                </div>
+                <div class="rate-time" id="rateUpdateTime">加载中...</div>
+            </div>
+        </div>
+
+        <!-- 核心输入区 -->
+        <div class="calc-section" role="region" aria-label="核心输入">
+            <div class="section-header" onclick="toggleSection('coreInput')" role="button" tabindex="0" aria-expanded="true" aria-controls="coreInputContent">
+                <div class="title" style="color: #10B981;" data-lang-key="coreInputTitle">
+                    <i class="fa fa-pencil" aria-hidden="true"></i>
+                    <span data-lang-key="coreInput">核心输入</span>
+                </div>
+                <div class="toggle-btn" data-lang-key="collapseBtn">
+                    <i class="fa fa-minus" aria-hidden="true"></i>
+                    <span data-lang-key="collapse">收起</span>
+                </div>
+            </div>
+            <div class="section-content expanded" id="coreInputContent">
+                <div class="input-grid">
+                    <div class="input-group">
+                        <label class="input-label" for="conversionRatio" data-lang-key="conversionRatioLabel">
+                            <i class="fa fa-exchange" aria-hidden="true"></i> 换股比率
+                        </label>
+                        <input type="number" id="conversionRatio" step="1" value="25" class="form-input no-currency" inputmode="decimal" aria-label="换股比率">
+                        <div class="input-hint" data-lang-key="conversionRatioHint">1正股对应权证份数</div>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label" for="warrantPrice" data-lang-key="warrantPriceLabel">
+                            <i class="fa fa-ticket" aria-hidden="true"></i> 权证现价
+                        </label>
+                        <div class="input-wrapper">
+                            <input type="number" id="warrantPrice" step="0.001" value="0. 049" class="form-input" placeholder="0.000" inputmode="decimal" aria-label="权证现价">
+                            <span class="currency-tag" id="warrantPriceTag" aria-hidden="true">SGD</span>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label" for="currentStockPrice" data-lang-key="currentStockPriceLabel">
+                            <i class="fa fa-line-chart" aria-hidden="true"></i> 正股现价
+                        </label>
+                        <div class="input-wrapper">
+                            <input type="number" id="currentStockPrice" step="0.01" value="61.50" class="form-input" placeholder="0.00" inputmode="decimal" aria-label="正股现价">
+                            <span class="currency-tag" id="currentStockPriceTag" aria-hidden="true">USD</span>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label" for="targetStockPrice" data-lang-key="targetStockPriceLabel">
+                            <i class="fa fa-bullseye" aria-hidden="true"></i> 正股目标价
+                        </label>
+                        <div class="input-wrapper">
+                            <input type="number" id="targetStockPrice" step="0.01" value="138.50" class="form-input" placeholder="0.00" inputmode="decimal" aria-label="正股目标价">
+                            <span class="currency-tag" id="targetStockPriceTag" aria-hidden="true">USD</span>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label" for="holdAmount" data-lang-key="holdAmountLabel">
+                            <i class="fa fa-database" aria-hidden="true"></i> 持有份数
+                        </label>
+                        <input type="number" id="holdAmount" step="100" value="1000" class="form-input no-currency" placeholder="0" inputmode="decimal" aria-label="持有份数">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 高级参数区 -->
+        <div class="calc-section" role="region" aria-label="高级参数">
+            <div class="section-header" onclick="toggleSection('advancedInput')" role="button" tabindex="0" aria-expanded="false" aria-controls="advancedInputContent">
+                <div class="title" style="color: #F59E0B;" data-lang-key="advancedInputTitle">
+                    <i class="fa fa-cog" aria-hidden="true"></i>
+                    <span data-lang-key="advancedInput">高级参数</span>
+                </div>
+                <div class="toggle-btn" data-lang-key="expandBtn">
+                    <i class="fa fa-plus" aria-hidden="true"></i>
+                    <span data-lang-key="expand">展开</span>
+                </div>
+            </div>
+            <div class="section-content" id="advancedInputContent">
+                <div class="input-grid">
+                    <div class="input-group">
+                        <label class="input-label" for="strikePrice" data-lang-key="strikePriceLabel">
+                            <i class="fa fa-bullseye" aria-hidden="true"></i> 正股行权价
+                        </label>
+                        <div class="input-wrapper">
+                            <input type="number" id="strikePrice" step="0.01" value="60. 00" class="form-input" placeholder="0.00" inputmode="decimal" aria-label="正股行权价">
+                            <span class="currency-tag" id="strikePriceTag" aria-hidden="true">USD</span>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label" for="feeRate" data-lang-key="feeRateLabel">
+                            <i class="fa fa-percent" aria-hidden="true"></i> 交易费率(%)
+                        </label>
+                        <input type="number" id="feeRate" step="0.01" value="0.3" class="form-input no-currency" placeholder="0.00" inputmode="decimal" aria-label="交易费率">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label" for="expireDate" data-lang-key="expireDateLabel">
+                            <i class="fa fa-calendar" aria-hidden="true"></i> 到期日
+                        </label>
+                        <input type="date" id="expireDate" class="form-input no-currency" aria-label="到期日">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label" for="volatility" data-lang-key="volatilityLabel">
+                            <i class="fa fa-random" aria-hidden="true"></i> 波动率(%)
+                        </label>
+                        <input type="number" id="volatility" step="0.1" value="20. 0" class="form-input no-currency" placeholder="20.0" inputmode="decimal" aria-label="波动率">
+                        <div class="input-hint" data-lang-key="volatilityHint">无数据填20-30%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 功能按钮组 -->
+        <div class="btn-group">
+            <button id="calculateBtn" class="calc-btn btn-primary" data-lang-key="calculateBtn" aria-label="计算收益">
+                <i class="fa fa-calculator" aria-hidden="true"></i>
+                <span data-lang-key="calculate">计算收益</span>
+            </button>
+            <button id="resetBtn" class="calc-btn btn-secondary" data-lang-key="resetBtn" aria-label="重置表单">
+                <i class="fa fa-refresh" aria-hidden="true"></i>
+                <span data-lang-key="reset">重置</span>
+            </button>
+        </div>
+
+        <!-- 结果展示区 -->
+        <div id="resultArea" class="result-section" role="region" aria-label="计算结果" aria-live="polite">
+            <div class="result-header">
+                <div class="result-title" data-lang-key="resultTitle">
+                    <i class="fa fa-chart-pie" aria-hidden="true"></i>
+                    <span data-lang-key="result">计算结果</span>
+                </div>
+                <div class="result-currency" data-lang-key="resultCurrency">
+                    <span id="resultCurrency">SGD</span>
+                </div>
+            </div>
+            <div class="core-result">
+                <div class="core-item">
+                    <div class="core-label" data-lang-key="profitRateLabel">投资收益率</div>
+                    <div class="core-value profit" id="profitRate" aria-live="assertive">0.00%</div>
+                </div>
+                <div class="core-item">
+                    <div class="core-label" data-lang-key="totalProfitLabel">目标总收益</div>
+                    <div class="core-value profit" id="totalProfit" aria-live="assertive">0.00 SGD</div>
+                </div>
+            </div>
+            <div class="detail-result">
+                <div class="detail-item">
+                    <div class="detail-label" data-lang-key="convertedCurrentPriceLabel">正股现价(换算)</div>
+                    <div class="detail-value" id="convertedCurrentStockPrice">0.00</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label" data-lang-key="convertedTargetPriceLabel">目标价(换算)</div>
+                    <div class="detail-value" id="convertedTargetStockPrice">0.00</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label" data-lang-key="totalCostLabel">权证成本</div>
+                    <div class="detail-value" id="totalCost">0.00</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label" data-lang-key="stockQuantityLabel">对应正股数</div>
+                    <div class="detail-value" id="stockQuantity">0.00</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label" data-lang-key="intrinsicValueLabel">内在价值</div>
+                    <div class="detail-value" id="intrinsicValue">0.000</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label" data-lang-key="remainingDaysLabel">剩余天数</div>
+                    <div class="detail-value" id="remainingDays">0</div>
+                </div>
+            </div>
+            <div class="note-box" data-lang-key="noteText">
+                <i class="fa fa-info-circle" aria-hidden="true"></i>
+                <span data-lang-key="note">MWE - 跨币种自动换算，结果仅供参考；实际收益受汇率、市场情绪影响。</span>
+            </div>
+        </div>
+
+        <!-- MWE页脚 -->
+        <div class="mwe-footer">
+            <span>© 2026</span>
+            <span class="mwe-logo">MWE</span>
+            <span data-lang-key="footerText">多币种权证收益估算器</span>
+            <span>•</span>
+            <span data-lang-key="version">v1.3</span>
+        </div>
+    </div>
+
+    <script>
+        // ===== 语言配置 =====
+        const LANGS = {
+            zh:  {
+                title: "多币种权证收益估算器",
+                enTitle: "Multi-currency Warrant Yield Estimator",
+                multiCurrency: "多币种",
+                realTimeRate: "实时汇率",
+                simpleOperation:  "简易操作",
+                basicSettings: "基础设置",
+                baseSelectorTitle: "基础设置",
+                warrantTypeLabel: "权证类型",
+                callOption: "认购（牛证）",
+                putOption: "认沽（熊证）",
+                settleCurrencyLabel: "结算币种",
+                stockCurrencyLabel: "正股币种",
+                rateUpdateHint: "汇率更新",
+                coreInputTitle: "核心输入",
+                coreInput: "核心输入",
+                collapseBtn: "收起",
+                collapse: "收起",
+                conversionRatioLabel: "换股比率",
+                conversionRatioHint: "1正股对应权证份数",
+                warrantPriceLabel: "权证现价",
+                currentStockPriceLabel: "正股现价",
+                targetStockPriceLabel: "正股目标价",
+                holdAmountLabel: "持有份数",
+                advancedInputTitle: "高级参数",
+                advancedInput: "高级参数",
+                expandBtn: "展开",
+                expand: "展开",
+                strikePriceLabel: "正股行权价",
+                feeRateLabel: "交易费率(%)",
+                expireDateLabel:  "到期日",
+                volatilityLabel: "波动率(%)",
+                volatilityHint: "无数据填20-30%",
+                calculateBtn: "计算收益",
+                calculate: "计算收益",
+                resetBtn: "重置",
+                reset: "重置",
+                resultTitle: "计算结果",
+                result: "计算结果",
+                resultCurrency: "结算币种：",
+                profitRateLabel: "投资收益率",
+                totalProfitLabel:  "目标总收益",
+                convertedCurrentPriceLabel: "正股现价(换算)",
+                convertedTargetPriceLabel: "目标价(换算)",
+                totalCostLabel: "权证成本",
+                stockQuantityLabel: "对应正股数",
+                intrinsicValueLabel:  "内在价值",
+                remainingDaysLabel: "剩余天数",
+                note: "MWE - 跨币种自动换算，结果仅供参考；实际收益受汇率、市场情绪影响。",
+                noteText: "note",
+                footerText: "多币种权证收益估算器",
+                version: "v1.3"
+            },
+            en: {
+                title: "Multi-currency Warrant Yield Estimator",
+                enTitle: "Multi-currency Warrant Yield Estimator",
+                multiCurrency: "Multi-currency",
+                realTimeRate: "Real-time Rate",
+                simpleOperation:  "Simple Operation",
+                basicSettings: "Basic Settings",
+                baseSelectorTitle: "Basic Settings",
+                warrantTypeLabel: "Warrant Type",
+                callOption: "Call (Bull)",
+                putOption: "Put (Bear)",
+                settleCurrencyLabel: "Settlement Currency",
+                stockCurrencyLabel: "Stock Currency",
+                rateUpdateHint: "Rate Updated",
+                coreInputTitle:  "Core Input",
+                coreInput: "Core Input",
+                collapseBtn: "Collapse",
+                collapse: "Collapse",
+                conversionRatioLabel: "Conversion Ratio",
+                conversionRatioHint: "Warrants per 1 stock",
+                warrantPriceLabel: "Warrant Price",
+                currentStockPriceLabel: "Stock Price",
+                targetStockPriceLabel: "Target Price",
+                holdAmountLabel:  "Hold Amount",
+                advancedInputTitle: "Advanced",
+                advancedInput: "Advanced",
+                expandBtn: "Expand",
+                expand: "Expand",
+                strikePriceLabel: "Strike Price",
+                feeRateLabel:  "Fee Rate(%)",
+                expireDateLabel:  "Expiry Date",
+                volatilityLabel: "Volatility(%)",
+                volatilityHint: "Fill 20-30% if no data",
+                calculateBtn:  "Calculate",
+                calculate: "Calculate",
+                resetBtn: "Reset",
+                reset: "Reset",
+                resultTitle: "Results",
+                result: "Results",
+                resultCurrency: "Currency:",
+                profitRateLabel:  "Return Rate",
+                totalProfitLabel: "Total Profit",
+                convertedCurrentPriceLabel: "Stock Price(Converted)",
+                convertedTargetPriceLabel: "Target(Converted)",
+                totalCostLabel: "Total Cost",
+                stockQuantityLabel: "Stock Qty",
+                intrinsicValueLabel: "Intrinsic Value",
+                remainingDaysLabel:  "Days Left",
+                note: "MWE - Auto currency conversion, results for reference only.",
+                noteText: "note",
+                footerText: "Multi-currency Warrant Estimator",
+                version: "v1.3"
+            }
+        };
+
+        let currentLang = "zh";
+
+        // ===== 语言切换 =====
+        function switchLanguage() {
+            currentLang = currentLang === "zh" ? "en" : "zh";
+            document.getElementById("langText").textContent = currentLang === "zh" ? "EN" : "ZH";
+            document. documentElement.lang = currentLang;
+
+            document.querySelectorAll("[data-lang-key]").forEach(el => {
+                const key = el.getAttribute("data-lang-key");
+                if (LANGS[currentLang][key]) {
+                    if (el.tagName === "OPTION" || el.tagName === "SPAN") {
+                        el.textContent = LANGS[currentLang][key];
+                    }
+}            });
+            updateToggleBtnText();
+        }
+
+        // ===== 更新折叠按钮文字 =====
+        function updateToggleBtnText() {
+            const coreToggle = document.querySelector('[onclick="toggleSection(\'coreInput\')"] .toggle-btn');
+            const advancedToggle = document.querySelector('[onclick="toggleSection(\'advancedInput\')"] .toggle-btn');
+            
+            if (! coreToggle || !advancedToggle) return;
+            
+            const coreExpanded = document.getElementById("coreInputContent").classList.contains("expanded");
+            const advancedExpanded = document. getElementById("advancedInputContent").classList.contains("expanded");
+            
+            coreToggle.innerHTML = coreExpanded
+                ? `<i class="fa fa-minus"></i> ${LANGS[currentLang]. collapse}`
+                : `<i class="fa fa-plus"></i> ${LANGS[currentLang].expand}`;
+            
+            advancedToggle.innerHTML = advancedExpanded
+                ? `<i class="fa fa-minus"></i> ${LANGS[currentLang].collapse}`
+                : `<i class="fa fa-plus"></i> ${LANGS[currentLang].expand}`;
+        }
+
+        // ===== 汇率数据 =====
+        let CURRENCY_RATES = {
+            SGD: { USD: 0.74, HKD: 5.80, SGD: 1.0 },
+            USD: { SGD: 1.35, HKD: 7.82, USD: 1.0 },
+            HKD: { SGD: 0.17, USD: 0.13, HKD: 1.0 }
+        };
+
+        // ===== 获取实时汇率 =====
+        async function fetchRealTimeRates() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString(currentLang === "zh" ? "zh-CN" : "en-US");
+            document.getElementById('rateUpdateTime').textContent = timeStr;
+            
+            try {
+                const response = await Promise.race([
+                    fetch('https://api.exchangerate.host/latest? base=USD'),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+                ]);
+                
+                if (response && response.ok) {
+                    const data = await response.json();
+                    if (data.rates && data.rates. SGD && data.rates.HKD) {
+                        CURRENCY_RATES = {
+                            SGD: { 
+                                USD: +(1 / data.rates.SGD).toFixed(4),
+                                HKD: +(data.rates.HKD / data.rates.SGD).toFixed(4),
+                                SGD: 1.0 
+                            },
+                            USD: { 
+                                SGD: +data.rates.SGD.toFixed(4),
+                                HKD: +data.rates. HKD.toFixed(4),
+                                USD: 1.0 
+                            },
+                            HKD: { 
+                                SGD: +(data.rates.SGD / data.rates.HKD).toFixed(4),
+                                USD: +(1 / data.rates.HKD).toFixed(4),
+                                HKD: 1.0 
+                            }
+                        };
+                    }
+                }
+            } catch (error) {
+                console.log('使用默认汇率');
+            }
+        }
+
+        // ===== 折叠/展开区块 =====
+        function toggleSection(sectionId) {
+            const content = document.getElementById(`${sectionId}Content`);
+            const header = content.previousElementSibling;
+            const isExpanded = content.classList.toggle('expanded');
+            
+            // 更新 aria-expanded 属性
+            header.setAttribute('aria-expanded', isExpanded);
+            
+            const toggleBtn = header.querySelector('.toggle-btn');
+            if (toggleBtn) {
+                toggleBtn. innerHTML = isExpanded
+                    ? `<i class="fa fa-minus"></i> ${LANGS[currentLang].collapse}`
+                    : `<i class="fa fa-plus"></i> ${LANGS[currentLang].expand}`;
+            }
+        }
+
+        // ===== 更新币种标签 =====
+        function updateCurrencyTags() {
+            const warrantCurrency = document.getElementById('warrantCurrency').value;
+            const stockCurrency = document.getElementById('stockCurrency').value;
+            
+            document.getElementById('warrantPriceTag').textContent = warrantCurrency;
+            document.getElementById('strikePriceTag').textContent = stockCurrency;
+            document.getElementById('currentStockPriceTag').textContent = stockCurrency;
+            document.getElementById('targetStockPriceTag').textContent = stockCurrency;
+            document.getElementById('resultCurrency').textContent = warrantCurrency;
+        }
+
+        // ===== 计算剩余天数 =====
+        function getRemainingDays(expireDateStr) {
+            if (!expireDateStr) return 0;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const expireDate = new Date(expireDateStr);
+            expireDate.setHours(0, 0, 0, 0);
+            const diff = expireDate. getTime() - today.getTime();
+            return Math.max(Math.ceil(diff / (1000 * 3600 * 24)), 0);
+        }
+
+        // ===== 计算时间价值 =====
+        function calculateTimeValue(stockPriceSettled, volatility, remainingDays, conversionRatio) {
+            if (!remainingDays || !volatility || volatility === 0) return 0;
+            const sqrtT = Math.sqrt(remainingDays / 365);
+            return (volatility / 100 * stockPriceSettled * sqrtT) / conversionRatio;
+        }
+
+        // ===== 验证输入 =====
+        function validateInputs() {
+            const inputs = [
+                { id: 'warrantPrice', name: '权证现价', min: 0 },
+                { id: 'currentStockPrice', name: '正股现价', min: 0 },
+                { id: 'targetStockPrice', name:  '正股目标价', min: 0 },
+                { id:  'strikePrice', name: '正股行权价', min: 0 },
+                { id: 'conversionRatio', name: '换股比率', min: 1 },
+                { id: 'holdAmount', name: '持有份数', min: 0 },
+                { id: 'feeRate', name: '交易费率', min: 0, max: 100 },
+                { id: 'volatility', name: '波动率', min: 0, max: 500 }
+            ];
+
+            for (const input of inputs) {
+                const el = document.getElementById(input.id);
+                const value = parseFloat(el.value);
+                
+                if (isNaN(value) || value < (input.min || 0)) {
+                    alert(`${input.name}不能为空或小于${input.min || 0}`);
+                    el.focus();
+                    return false;
+                }
+                
+                if (input.max && value > input.max) {
+                    alert(`${input.name}不能超过${input.max}`);
+                    el.focus();
+                    return false;
+                }
+            }
+            
+            if (! document.getElementById('expireDate').value) {
+                alert('请选择到期日');
+                document.getElementById('expireDate').focus();
+                return false;
+            }
+            
+            return true;
+        }
+
+        // ===== 核心计算逻辑 =====
+        function performCalculation() {
+            if (!validateInputs()) return;
+
+            const warrantType = document.getElementById('warrantType').value;
+            const warrantCurrency = document.getElementById('warrantCurrency').value;
+            const stockCurrency = document.getElementById('stockCurrency').value;
+
+            const warrantPrice = parseFloat(document.getElementById('warrantPrice').value);
+            const strikePrice = parseFloat(document. getElementById('strikePrice').value);
+            const conversionRatio = parseFloat(document.getElementById('conversionRatio').value);
+            const holdAmount = parseFloat(document.getElementById('holdAmount').value);
+            const currentStockPrice = parseFloat(document.getElementById('currentStockPrice').value);
+            const targetStockPrice = parseFloat(document.getElementById('targetStockPrice').value);
+            const feeRate = parseFloat(document. getElementById('feeRate').value) / 100;
+            const volatility = parseFloat(document.getElementById('volatility').value);
+            const expireDateStr = document.getElementById('expireDate').value;
+
+            // 汇率转换
+            const rate = CURRENCY_RATES[stockCurrency][warrantCurrency];
+            const strikePriceSettled = strikePrice * rate;
+            const currentStockPriceSettled = currentStockPrice * rate;
+            const targetStockPriceSettled = targetStockPrice * rate;
+
+            // 计算关键指标
+            const remainingDays = getRemainingDays(expireDateStr);
+            const stockQuantity = holdAmount / conversionRatio;
+            
+            const intrinsicValue = Math.max(
+                warrantType === 'call' 
+                    ? (targetStockPriceSettled - strikePriceSettled) / conversionRatio 
+                    : (strikePriceSettled - targetStockPriceSettled) / conversionRatio,
+                0
+            );
+            
+            const timeValue = calculateTimeValue(currentStockPriceSettled, volatility, remainingDays, conversionRatio);
+            const theoreticalPrice = intrinsicValue + timeValue;
+
+            const totalCost = holdAmount * warrantPrice * (1 + feeRate);
+            const totalRevenue = holdAmount * theoreticalPrice * (1 - feeRate);
+            const totalProfit = totalRevenue - totalCost;
+            const profitRate = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
+
+            // 更新结果显示
+            const unit = warrantCurrency;
+            document.getElementById('convertedCurrentStockPrice').textContent = `${currentStockPriceSettled. toFixed(2)} ${unit}`;
+            document.getElementById('convertedTargetStockPrice').textContent = `${targetStockPriceSettled.toFixed(2)} ${unit}`;
+            document.getElementById('totalCost').textContent = `${totalCost.toFixed(2)} ${unit}`;
+            document.getElementById('stockQuantity').textContent = `${stockQuantity.toFixed(2)}`;
+            document.getElementById('intrinsicValue').textContent = `${intrinsicValue.toFixed(3)} ${unit}`;
+            document.getElementById('remainingDays').textContent = `${remainingDays}`;
+            document.getElementById('totalProfit').textContent = `${totalProfit.toFixed(2)} ${unit}`;
+            document.getElementById('profitRate').textContent = `${profitRate.toFixed(2)}%`;
+
+            // 更新颜色
+            const profitEl = document.getElementById('totalProfit');
+            const rateEl = document.getElementById('profitRate');
+            
+            if (totalProfit >= 0) {
+                profitEl.className = 'core-value profit';
+                rateEl.className = 'core-value profit';
+            } else {
+                profitEl.className = 'core-value loss';
+                rateEl.className = 'core-value loss';
+            }
+
+            // 显示结果
+            document.getElementById('resultArea').classList.add('show');
+            
+            // 滚动到结果
+            setTimeout(() => {
+                document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100);
+        }
+
+        // ===== 计算按钮事件 =====
+        document. getElementById('calculateBtn').addEventListener('click', performCalculation);
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && ! e.shiftKey) {
+                performCalculation();
+            }
+        });
+
+        // ===== 重置功能 =====
+        function resetForm() {
+            // 重置所有输入
+            document.querySelectorAll('input').forEach(input => {
+                if (input.type === 'date') {
+                    const defaultDate = new Date();
+                    defaultDate.setDate(defaultDate.getDate() + 30);
+                    input.valueAsDate = defaultDate;
+                } else {
+                    input.value = input.defaultValue || '';
+                }
+            });
+
+            document.querySelectorAll('select').forEach(select => {
+                select.value = select.defaultValue || select.options[0].value;
+            });
+
+            updateCurrencyTags();
+            
+            const coreInput = document.getElementById('coreInputContent');
+            const advancedInput = document.getElementById('advancedInputContent');
+            
+            coreInput.classList.add('expanded');
+            advancedInput.classList.remove('expanded');
+            
+            const coreHeader = coreInput.previousElementSibling;
+            const advHeader = advancedInput.previousElementSibling;
+            
+            coreHeader.setAttribute('aria-expanded', 'true');
+            advHeader.setAttribute('aria-expanded', 'false');
+            
+            updateToggleBtnText();
+            document.getElementById('resultArea').classList.remove('show');
+        }
+
+        document.getElementById('resetBtn').addEventListener('click', resetForm);
+
+        // ===== 初始化 =====
+        window.addEventListener('load', () => {
+            // 设置默认到期日
+            const defaultDate = new Date();
+            defaultDate. setDate(defaultDate.getDate() + 30);
+            document.getElementById('expireDate').valueAsDate = defaultDate;
+            
+            // 初始化币种标签
+            updateCurrencyTags();
+            
+            // 获取汇率
+            fetchRealTimeRates();
+            
+            // 每30分钟更新一次汇率
+            setInterval(fetchRealTimeRates, 30 * 60 * 1000);
+            
+            // 语言切换
+            document.getElementById('langSwitch').addEventListener('click', switchLanguage);
+            
+            // 币种变更事件
+            document.getElementById('warrantCurrency').addEventListener('change', updateCurrencyTags);
+            document.getElementById('stockCurrency').addEventListener('change', updateCurrencyTags);
+            
+            // 键盘导航增强
+            document.querySelectorAll('[role="button"]').forEach(btn => {
+                btn.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e. preventDefault();
+                        btn.click();
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
